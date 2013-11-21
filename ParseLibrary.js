@@ -17,7 +17,7 @@ var toplevel = UglifyJS.parse(code);
 var outAST = fs.openSync('uglify/jquery-AST.js', 'w');
 var out = fs.openSync('uglify/jquery-uglify.js', 'w');
 
-fs.writeSync(outAST, JSON.stringify(toplevel));
+fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
 
 var walkerFunction = function(node){
     //check for function calls

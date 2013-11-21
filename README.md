@@ -15,3 +15,22 @@ NOTES:
 1) Walker returns true for a non-recursive traversal(Only top-level), return false to recurse.
 
 2) ...
+
+
+
+Libraries in the top 100 for which source was not found:
+
+Link - http://www.takipiblog.com/2013/11/20/we-analyzed-30000-github-projects-here-are-the-top-100-libraries-in-java-js-and-ruby/
+----
+/* finds index.js but seems empty*/
+expect
+formidable
+mongoose
+----
+/* can find no match */
+bower
+expresso
+node-uuid
+regarde
+shelljs
+socket.io-client
