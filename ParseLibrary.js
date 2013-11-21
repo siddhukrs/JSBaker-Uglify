@@ -12,11 +12,14 @@ var code = fs.readFileSync(inputFile, "utf8");
 /*Parser*/
 var toplevel = UglifyJS.parse(code);
 
+
 /*Output*/
+var outAST = fs.openSync('uglify/jquery-AST.js', 'w');
 var out = fs.openSync('uglify/jquery-uglify.js', 'w');
 
+fs.writeSync(outAST, JSON.stringify(toplevel));
 
-var walker = new UglifyJS.TreeWalker(function(node){
+var walkerFunction = function(node){
     //check for function calls
     /*if (node instanceof UglifyJS.AST_Call) 
     {
@@ -67,7 +70,6 @@ var walker = new UglifyJS.TreeWalker(function(node){
     }*/
     if (node instanceof UglifyJS.AST_Defun) 
     {
-        // string_template is a cute little function that UglifyJS uses for warnings
         fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
             name: node.name.name,
             line: node.start.line,
@@ -79,28 +81,47 @@ var walker = new UglifyJS.TreeWalker(function(node){
     {
         if (node.right instanceof UglifyJS.AST_Function) 
         {
-            // string_template is a cute little function that UglifyJS uses for warnings
+            
             var functionNode = node.right;
-            var keys = Object.keys(node.left);
-                console.log(keys);
-
+        
             var args = functionNode.argnames;
             var argStrings = [];
             for(var i = 0 ; i< args.length; i++)
             {
-                //console.log(args[i].name);
                 argStrings.push(args[i].name);
             }
-            fs.writeSync(out, UglifyJS.string_template("Found AST_Function {name} at {line},{col}", {
-                name: node.left.name,
-                line: functionNode.start.line,
-                col: functionNode.start.col
-            }) + "\n");
+
+            fs.writeSync(out, node.left.TYPE + ":" + node.left + "\n");
+            
+            var keys = Object.keys(node.left);
+                fs.writeSync(out, "-- " + keys.length + "\n");
+            
+            for(var i = 0; i< keys.length; i++)
+                fs.writeSync(out, "   --- " + keys[i] + "\n");
+
+            if(node.left instanceof UglifyJS.AST_Dot)
+            {
+                fs.writeSync(out, "dot..\n");
+                fs.writeSync(out, "name: " + node.left.property.TYPE + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+            }
+            else if(node.left instanceof UglifyJS.AST_SymbolAccessor)
+            {
+                //console.log("true too");
+                //fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+            }
+            else if(node.left instanceof UglifyJS.AST_Assign)
+            {
+                //console.log("true too");
+                //fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+            }
         }
     }
 
     
-});
+};
+
+
+var walker = new UglifyJS.TreeWalker(walkerFunction);
 
 
 /*Walk the AST */
