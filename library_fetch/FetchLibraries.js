@@ -1,6 +1,6 @@
 /*
 		--------------------------
-	Helper functions and Prototype function adds:
+	Helper functions and Prototype function includes:
 		--------------------------
 */
 
