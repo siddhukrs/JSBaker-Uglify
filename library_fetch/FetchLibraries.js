@@ -92,35 +92,59 @@ var walk = function(dir) {
 
 var fs = require('fs');
 
-
-var packageListFile = 'library_list.txt';
-var packageList = fs.readFileSync(packageListFile);
-var packageArray = packageList.toString().split("\n");
-
-
 var execSync = require('execSync');
 
 var existingPackages = walkExistingPackagesFound('Fetched_Libraries');
 
 var existingNpmInstalls = fs.readdirSync('node_modules');
 
-
-
 var newresults = [];
+
 var results =  walk('node_modules');
 
 var notFoundArray = [];
-
-for(var i=0; i<packageArray.length; i++)
+if (process.argv.length < 3)
 {
-	var packageName = packageArray[i];
+
+	var packageListFile = 'library_list.txt';
+	var packageList = fs.readFileSync(packageListFile);
+	var packageArray = packageList.toString().split("\n");
+	for(var i=0; i<packageArray.length; i++)
+	{
+		var packageName = packageArray[i];
+		resolveAndFetchLibrary(packageName);
+	}
 	
 
+}
+else
+{
+	var packageName = process.argv[2];
+	resolveAndFetchLibrary(packageName);
+}
+
+if(notFoundArray.length > 0)
+{
+	console.log("NOT FOUND: ")
+	for(var i =0; i<notFoundArray.length; i++)
+		console.log( ' - ' + notFoundArray[i]);
+}
+
+
+function writeFileToFolder(fileName, packageName)
+{
+	var commandOp = execSync.run('mv ' + fileName + ' ' +  'Fetched_Libraries/' + packageName + '.js');
+	console.log('-- Fetched ' + packageName + ' to Fetched_Libraries');
+	return 1;
+}
+
+function resolveAndFetchLibrary(packageName)
+{
 	if(indexOf.call(existingPackages, packageName) === -1)
 	{
 		var foundFlag = 0;
-		console.log('Fetching ' + packageName + ':')
-		
+		console.log('Looking for ' + packageName + ' :')
+
 		if(newresults.length > results.length)
 			results = newresults;
 		
@@ -132,10 +156,7 @@ for(var i=0; i<packageArray.length; i++)
 			{
 				if(splitName[splitName.length-2] === packageName || splitName[splitName.length-2] === 'lib')
 				{
-					foundFlag = 1;
-					console.log('-- Found ' + fileName);
-					var commandOp = execSync.run('mv ' + fileName + ' ' +  'Fetched_Libraries/' + packageName + '.js');
-					console.log('-- Moved ' + packageName + ' to Fetched_Libraries');
+					foundFlag = writeFileToFolder(fileName, packageName);
 					break;
 				}
 			}
@@ -151,10 +172,7 @@ for(var i=0; i<packageArray.length; i++)
 				{
 					if(splitName[splitName.length-2] === packageName || splitName[splitName.length-2] === 'lib')
 					{
-						foundFlag = 1;
-						console.log('-- Found ' + fileName);
-						var commandOp = execSync.run('mv ' + fileName + ' ' +  'Fetched_Libraries/' + packageName + '.js');
-						console.log('-- Moved ' + packageName + ' to Fetched_Libraries');
+						foundFlag = writeFileToFolder(fileName, packageName);
 						break;
 					}
 				}
@@ -169,11 +187,8 @@ for(var i=0; i<packageArray.length; i++)
 				var splitName = fileName.split('/');
 				if(splitName[splitName.length-1].endsWith('js') === true &&  splitName[splitName.length-1].startsWith(packageName) === true)
 				{
-						foundFlag = 1;
-						console.log('-- Found ' + fileName);
-						var commandOp = execSync.run('mv ' + fileName + ' ' +  'Fetched_Libraries/' + packageName + '.js');
-						console.log('-- Moved ' + packageName + ' to Fetched_Libraries');
-						break;
+					foundFlag = writeFileToFolder(fileName, packageName);
+					break;
 				}
 			}
 		}
@@ -188,10 +203,7 @@ for(var i=0; i<packageArray.length; i++)
 				{
 					if(splitName[splitName.length-1] === 'index.js')
 					{
-						foundFlag = 1;
-						console.log('-- Found ' + fileName);
-						var commandOp = execSync.run('mv ' + fileName + ' ' +  'Fetched_Libraries/' + packageName + '.js');
-						console.log('-- Moved ' + packageName + ' to Fetched_Libraries');
+						foundFlag = writeFileToFolder(fileName, packageName);
 						break;
 					}
 				}
@@ -200,7 +212,6 @@ for(var i=0; i<packageArray.length; i++)
 
 		if(foundFlag === 0)
 		{
-
 			if(indexOf.call(existingNpmInstalls, packageName) === -1)
 			{
 				console.log('- Fetching ' + packageName + ' using npm:')
@@ -211,15 +222,11 @@ for(var i=0; i<packageArray.length; i++)
 				{
 					var fileName = newresults[j];
 					var splitName = fileName.split('/');
-					//if(splitName[splitName.length-1].endsWith('js') === true &&  splitName[splitName.length-1].startsWith(packageName) === true)
 					if(splitName[splitName.length-1] === (packageName + '.js'))
 					{
 						if(splitName[splitName.length-2] === packageName || splitName[splitName.length-2] === 'lib')
 						{
-							foundFlag = 1;
-							console.log('-- Found ' + fileName);
-							var commandOp = execSync.run('mv ' + fileName + ' ' +  'Fetched_Libraries/' + packageName + '.js');
-							console.log('-- Moved ' + packageName + ' to Fetched_Libraries');
+							foundFlag = writeFileToFolder(fileName, packageName);
 							break;
 						}
 					}
@@ -233,8 +240,3 @@ for(var i=0; i<packageArray.length; i++)
 		}
 	}
 }
-
-
-console.log("NOT FOUND: ")
-for(var i =0; i<notFoundArray.length; i++)
-	console.log(notFoundArray[i]);
