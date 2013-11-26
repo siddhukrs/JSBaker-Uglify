@@ -11,7 +11,7 @@ var code = fs.readFileSync(inputFile, "utf8");
 
 /*Parser*/
 var toplevel = UglifyJS.parse(code);
-
+toplevel.figure_out_scope();
 
 /*Output*/
 //var outAST = fs.openSync('uglify/jquery-AST.js', 'w');
@@ -22,6 +22,22 @@ var names = fs.openSync('uglify/jquery-uglify-names.js', 'w');
 var types = [];
 
 //fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
+
+var getParentTypes = function(node) {
+    var parents = walker.stack;
+    var parentTypes = [];
+    parents.forEach( function(value){
+            parentTypes.push(value.TYPE);
+        }
+    );
+    return parentTypes;
+};
+
+var printStackToFile = function(fname, stack){
+
+    for(var i = 0; i<stack.length; i++)
+        fs.writeSync(fname, '-- ' + stack[i] + '\n');
+};
 
 var walkerFunction = function(node){
     //check for function calls
@@ -88,8 +104,9 @@ var walkerFunction = function(node){
             name: node.name.name,
             line: node.start.line,
             col: node.start.col
-        }));
+        }) + "\n");
              fs.writeSync(names,  node.name.name + '\n');
+             printStackToFile(names, getParentTypes(node));
              fs.writeSync(out, " Parent: " + pname + "\n");
     }
 
@@ -97,13 +114,14 @@ var walkerFunction = function(node){
     {
         if(node.value instanceof UglifyJS.AST_Function)
         {
-                 fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
-                name: node.name.name,
+                 fs.writeSync(out, UglifyJS.string_template("Found AST_ObjectKeyVal {name} at {line},{col}", {
+                name: node.key,
                 line: node.start.line,
                 col: node.start.col
-            }));
-                 fs.writeSync(names,  node.name.name + '\n' + "here" + "\n");
-                 fs.writeSync(out, " Parent: " + pname + "\n");
+            }) + "\n");
+                 fs.writeSync(names,  node.key + '\n' );
+                 printStackToFile(names, getParentTypes(node));
+                 //fs.writeSync(out, " Parent: " + pname + "\n");
         }
     }
 
@@ -137,16 +155,19 @@ var walkerFunction = function(node){
                 {
                     fs.writeSync(out, "name: " + node.left.expression.name + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
                     fs.writeSync(names, node.left.expression.name + '.'  +  node.left.property + '\n' );
+                    printStackToFile(names, getParentTypes(node));
                 }
                 else if(node.left.expression instanceof UglifyJS.AST_Dot)
                 {
-                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property.val + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
                    fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property  + '\n');
+                   printStackToFile(names, getParentTypes(node));
                }
                else if(node.left.expression instanceof UglifyJS.AST_Sub)
                {
-                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                   fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property  + '\n');
+                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+                   fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value  + '\n');
+                   printStackToFile(names, getParentTypes(node));
                }
                 else
                     console.log('!! : ' + node.left.expression.TYPE);
@@ -154,21 +175,23 @@ var walkerFunction = function(node){
 
             else if(node.left instanceof UglifyJS.AST_Sub)
             {
-                fs.writeSync(out, 'left.expression = ' + node.left.expression.TYPE + '\n');
                 if(node.left.expression instanceof UglifyJS.AST_SymbolRef)
                 {
                     fs.writeSync(out, "name: " + node.left.expression.name + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
                     fs.writeSync(names, node.left.expression.name + '.'  +  node.left.property  + '\n');
+                    printStackToFile(names, getParentTypes(node));
                 }
                 else if(node.left.expression instanceof UglifyJS.AST_Dot)
                 {
-                    fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                    fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property + '\n');
+                    fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+                    fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + '\n');
+                    printStackToFile(names, getParentTypes(node));
                 }
                 else if(node.left.expression instanceof UglifyJS.AST_Sub)
                 {
-                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                   fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property  + '\n');
+                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+                   fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value  + '\n');
+                   printStackToFile(names, getParentTypes(node));
                 }
                 else
                     console.log('++ : ' + node.left.expression.TYPE);
@@ -177,6 +200,7 @@ var walkerFunction = function(node){
             {
                 fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
                 fs.writeSync(names, node.left.name  + '\n');
+                printStackToFile(names, getParentTypes(node));
             }
             else if(node.left instanceof UglifyJS.AST_Assign)
             {
