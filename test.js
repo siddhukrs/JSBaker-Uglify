@@ -1,4 +1,5 @@
-var foo = function()
+var obj = {};
+obj.prop = function()
 {
 	var self = {
 		bar : function()
@@ -8,5 +9,4 @@ var foo = function()
 	};
 	return self;
 };
-
-foo().bar();
+obj.prop().bar();
