@@ -14,15 +14,16 @@ var toplevel = UglifyJS.parse(code);
 toplevel.figure_out_scope();
 
 /*Output*/
-//var outAST = fs.openSync('uglify/jquery-AST.js', 'w');
 var out = fs.openSync('uglify/jquery-uglify.js', 'w');
 var names = fs.openSync('uglify/jquery-uglify-names.js', 'w');
 
 
 var types = [];
 
-//fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
-
+/*To print the AST to a file: 
+var outAST = fs.openSync('uglify/jquery-AST.js', 'w');
+fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
+*/
 var getParentTypes = function(node) {
     var parents = walker.stack;
     var parentTypes = [];

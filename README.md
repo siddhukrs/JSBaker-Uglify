@@ -9,9 +9,7 @@ INSTRUCTIONS:
 1) To fetch the JavaScript source for any JavaScript library:
 
 - Install Node.js and Node Package Manager(npm).
-- Install execSync using npm
-	npm install execSync
-- In the library\_fetch directory, create two directories named Fetched\_Libraries and node\_modules.
+- In the library\_fetch directory, create empty directories named Fetched\_Libraries and node\_modules.
 - Run FetchLibraries.js
 
 (FetchLibrary.js fetches all scripts specified in library\_list.txt using NPM. Traverses the directory tree to identify the corresponding js file for each package and stores them in the Fetched\_libraries directory.)
