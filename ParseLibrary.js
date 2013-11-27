@@ -1,11 +1,30 @@
+/* Input CLI arguments*/
+var inputFile;
+var libName;
+if (process.argv.length < 3)
+{
+    console.log('Missing file name argument.');
+    process.exit(1);
+}
+else
+{
+    inputFile = process.argv[2];
+    var temp = inputFile.split('/');
+    var libNameJS = temp[temp.length-1];
+    libName = libNameJS.split('.')[0];
+    console.log(libName);
+}
+
+
+
+
 /* Requires*/
 var UglifyJS = require('uglify-js')
 var fs = require('fs');
 var util = require('util');
 
 
-/*Inputs*/
-var inputFile = 'lib/jquery.js';
+/*Fetch Code*/
 var code = fs.readFileSync(inputFile, "utf8");
 
 
@@ -14,14 +33,14 @@ var toplevel = UglifyJS.parse(code);
 toplevel.figure_out_scope();
 
 /*Output*/
-var out = fs.openSync('uglify/jquery-uglify.js', 'w');
-var names = fs.openSync('uglify/jquery-uglify-names.js', 'w');
+var out = fs.openSync('uglify/' + libName +'-uglify.js', 'w');
+var names = fs.openSync('uglify/' + libName + '-uglify-names.js', 'w');
 
 
 var types = [];
 
 /*To print the AST to a file: 
-var outAST = fs.openSync('uglify/jquery-AST.js', 'w');
+var outAST = fs.openSync('uglify/' + libName + '-AST.js', 'w');
 fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
 */
 var getParentTypes = function(node) {
