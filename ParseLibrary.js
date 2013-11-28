@@ -12,7 +12,6 @@ else
     var temp = inputFile.split('/');
     var libNameJS = temp[temp.length-1];
     libName = libNameJS.split('.')[0];
-    console.log(libName);
 }
 
 
@@ -59,67 +58,34 @@ var printStackToFile = function(fname, stack){
         fs.writeSync(fname, '-- ' + stack[i] + '\n');
 };
 
+var printImmediateParentToFile = function(fname, stack) {
+
+};
+
+
+var visitDotSubExp = function(node, name) {
+
+    console.log('-- ' + node.TYPE + ' --');
+
+    if(node.expression instanceof UglifyJS.AST_SymbolRef)
+    {
+        name =  node.expression.name + '.'  +  node.property + '.' + name;
+        return name;
+    }
+    else if(node.expression instanceof UglifyJS.AST_Dot || node.expression instanceof UglifyJS.AST_Sub)
+    {
+        name = visitDotSubExp(node.expression, node.property);
+        return name;
+    }
+    else
+        console.log('!! : ' + node.left.expression.TYPE);
+};
+
 var walkerFunction = function(node){
-    //check for function calls
-    /*if (node instanceof UglifyJS.AST_Call) 
-    {
-        if(node.expression.name !== undefined)
-        {
-            //find where the calling function is defined
-            var p = walker.find_parent(UglifyJS.AST_Defun);
 
-            if(p !== undefined)
-            {
-                //filter out unneccessary stuff, eg calls to external libraries or constructors
-                if(node.expression.name == "$" || node.expression.name == "Number" || node.expression.name =="Date")
-                {
-                    //NOTE: $ is from jquery, and causes problems if it's in the DOT file.
-                    //It's also very frequent, so even replacing it with a safe string
-                    //results in a very cluttered graph
-                }
-                else
-                {
-
-                    fs.writeSync(out, p.name.name);
-                    fs.writeSync(out, " -> ");
-                    fs.writeSync(out, node.expression.name);
-                    fs.writeSync(out, "\n");
-                }
-            }
-            else
-            {
-                //it's a top level function
-                fs.writeSync(out, node.expression.name);
-                fs.writeSync(out, "\n");
-            }
-
-        }
-    }*/
-    /*if(node instanceof UglifyJS.AST_Defun)
-    {
-        //defined but not called
-        var parents = walker.stack;
-        fs.writeSync(out, node.name.name);
-        for(var i = 0; i<parents.length; i++)
-        {
-            if(parents[i].name !== undefined && parents[i].name !== null)
-                fs.writeSync(out, "--- "+parents[i].name.name);
-        }
-        fs.writeSync(out, "\n");
-        return false;
-    }*/
+    /*Check for AST_Defun ( function foo(){} ) style function definitions */
     if (node instanceof UglifyJS.AST_Defun) 
     {
-        var p = walker.find_parent(UglifyJS.AST_Defun);
-        var pname = 'undefined';
-            if(p !== undefined)
-            {
-                    pname = p.name.name;
-
-            }
-            /*if(pname !== 'undefined')
-               console.log(pname);*/
-
              fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
             name: node.name.name,
             line: node.start.line,
@@ -127,9 +93,11 @@ var walkerFunction = function(node){
         }) + "\n");
              fs.writeSync(names,  node.name.name + '\n');
              printStackToFile(names, getParentTypes(node));
-             fs.writeSync(out, " Parent: " + pname + "\n");
     }
 
+
+    /*Check for AST_ObjectKeyVal having a function as a key ( obj : function {}; ) style function definitions */
+    
     else if (node instanceof UglifyJS.AST_ObjectKeyVal) 
     {
         if(node.value instanceof UglifyJS.AST_Function)
@@ -141,15 +109,15 @@ var walkerFunction = function(node){
             }) + "\n");
                  fs.writeSync(names,  node.key + '\n' );
                  printStackToFile(names, getParentTypes(node));
-                 //fs.writeSync(out, " Parent: " + pname + "\n");
         }
     }
 
+    /*Check for AST_Assign having a function as the RHS ( x = function {}; ) style function definitions. Handle for multiple LHS */
     else if(node instanceof UglifyJS.AST_Assign)
     {
         if (node.right instanceof UglifyJS.AST_Function) 
         {
-            
+            /*Collect Function args and details */
             var functionNode = node.right;
         
             var args = functionNode.argnames;
@@ -158,64 +126,17 @@ var walkerFunction = function(node){
             {
                 argStrings.push(args[i].name);
             }
-
-            var p = walker.find_parent(UglifyJS.AST_Defun);
-            var pname = 'undefined';
-            if(p !== undefined)
-            {
-                    pname = p.name.name;
-
-            }
-            /*if(pname !== 'undefined')
-               console.log(pname);*/
             
-            if(node.left instanceof UglifyJS.AST_Dot)
+            
+            if(node.left instanceof UglifyJS.AST_Dot || node.left.expression instanceof UglifyJS.AST_Sub)
             {
-                if(node.left.expression instanceof UglifyJS.AST_SymbolRef)
-                {
-                    fs.writeSync(out, "name: " + node.left.expression.name + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                    fs.writeSync(names, node.left.expression.name + '.'  +  node.left.property + '\n' );
-                    printStackToFile(names, getParentTypes(node));
-                }
-                else if(node.left.expression instanceof UglifyJS.AST_Dot)
-                {
-                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property.val + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                   fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property  + '\n');
-                   printStackToFile(names, getParentTypes(node));
-               }
-               else if(node.left.expression instanceof UglifyJS.AST_Sub)
-               {
-                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                   fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value  + '\n');
-                   printStackToFile(names, getParentTypes(node));
-               }
-                else
-                    console.log('!! : ' + node.left.expression.TYPE);
+                var nameret = visitDotSubExp(node.left, '');
+                console.log(nameret + " ^^^" + node.left.start.line);
+                fs.writeSync(out, "name: " + nameret + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
+                fs.writeSync(names, nameret + '\n' );
+                printStackToFile(names, getParentTypes(node));
             }
 
-            else if(node.left instanceof UglifyJS.AST_Sub)
-            {
-                if(node.left.expression instanceof UglifyJS.AST_SymbolRef)
-                {
-                    fs.writeSync(out, "name: " + node.left.expression.name + '.'  +  node.left.property + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                    fs.writeSync(names, node.left.expression.name + '.'  +  node.left.property  + '\n');
-                    printStackToFile(names, getParentTypes(node));
-                }
-                else if(node.left.expression instanceof UglifyJS.AST_Dot)
-                {
-                    fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                    fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + '\n');
-                    printStackToFile(names, getParentTypes(node));
-                }
-                else if(node.left.expression instanceof UglifyJS.AST_Sub)
-                {
-                   fs.writeSync(out, "name: " + node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                   fs.writeSync(names, node.left.expression.expression.name + '.' +  node.left.expression.property + '.'  +  node.left.property.value  + '\n');
-                   printStackToFile(names, getParentTypes(node));
-                }
-                else
-                    console.log('++ : ' + node.left.expression.TYPE);
-            }
             else if(node.left instanceof UglifyJS.AST_SymbolRef)
             {
                 fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
@@ -224,7 +145,7 @@ var walkerFunction = function(node){
             }
             else if(node.left instanceof UglifyJS.AST_Assign)
             {
-                console.log("true too - handle this");
+                console.log("AST_Assign - handle this");
                 //fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
             }
             else

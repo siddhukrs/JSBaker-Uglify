@@ -1,6 +1,6 @@
 var obj = function()
 {
-	prop : null;
+	prop : function(){};
 };
 obj.prop = function()
 {
