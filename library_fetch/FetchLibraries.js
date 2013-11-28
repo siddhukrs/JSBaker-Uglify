@@ -106,15 +106,16 @@ var notFoundArray = [];
 if (process.argv.length < 3)
 {
 
-	var packageListFile = 'library_list.txt';
+	/*var packageListFile = 'library_list.txt';
 	var packageList = fs.readFileSync(packageListFile);
 	var packageArray = packageList.toString().split("\n");
 	for(var i=0; i<packageArray.length; i++)
 	{
 		var packageName = packageArray[i];
 		resolveAndFetchLibrary(packageName);
-	}
-	
+	}*/
+	console.log('Missing package name argument.');
+    process.exit(1);
 
 }
 else
