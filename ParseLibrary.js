@@ -48,11 +48,14 @@ var getParentTypes = function(node) {
     var parents = walker.stack;
     var parentTypes = [];
     parents.forEach( function(value){
-            //if(value.TYPE === )
+            if(value instanceof UglifyJS.AST_VarDef)
             {
-
+                parentTypes.push(value.TYPE + '!@#$ ' + value.name.name);
             }
-            parentTypes.push(value.TYPE);
+            else
+            {
+                parentTypes.push(value.TYPE);
+            }
         }
     );
     return parentTypes;
