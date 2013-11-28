@@ -69,7 +69,10 @@ var visitDotSubExp = function(node, name) {
 
     if(node.expression instanceof UglifyJS.AST_SymbolRef)
     {
-        name =  node.expression.name + '.'  +  node.property + '.' + name;
+        if(name !== '')
+            name =  node.expression.name + '.'  +  node.property + '.' + name;
+        else
+            name =  node.expression.name + '.'  +  node.property;
         return name;
     }
     else if(node.expression instanceof UglifyJS.AST_Dot || node.expression instanceof UglifyJS.AST_Sub)
