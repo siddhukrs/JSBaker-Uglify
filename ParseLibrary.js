@@ -29,7 +29,6 @@ var code = fs.readFileSync(inputFile, "utf8");
 
 /*Parser*/
 var toplevel = UglifyJS.parse(code);
-toplevel.figure_out_scope();
 
 /*Output*/
 var out = fs.openSync('uglify/' + libName +'-uglify.js', 'w');
@@ -38,14 +37,21 @@ var names = fs.openSync('uglify/' + libName + '-uglify-names.js', 'w');
 
 var types = [];
 
-/*To print the AST to a file: 
+/*To print the AST to a file: */
 var outAST = fs.openSync('uglify/' + libName + '-AST.js', 'w');
 fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
-*/
+
+toplevel.figure_out_scope();
+
+
 var getParentTypes = function(node) {
     var parents = walker.stack;
     var parentTypes = [];
     parents.forEach( function(value){
+            //if(value.TYPE === )
+            {
+
+            }
             parentTypes.push(value.TYPE);
         }
     );
