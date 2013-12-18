@@ -50,7 +50,11 @@ var getParentTypes = function(node) {
     parents.forEach( function(value){
             if(value instanceof UglifyJS.AST_VarDef)
             {
-                parentTypes.push(value.TYPE + '!@#$ ' + value.name.name);
+                parentTypes.push(value.TYPE + ' --- ' + value.name.name);
+            }
+            else if(value instanceof UglifyJS.AST_Call)
+            {
+                parentTypes.push(value.TYPE + ' --- ' + value.name.name);
             }
             else
             {
