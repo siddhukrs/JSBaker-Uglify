@@ -1,6 +1,7 @@
 /* Input CLI arguments*/
 var inputFile;
 var libName;
+
 if (process.argv.length < 3)
 {
     console.log('Missing file name argument.');
@@ -14,18 +15,13 @@ else
     libName = libNameJS.split('.')[0];
 }
 
-
-
-
 /* Requires*/
 var UglifyJS = require('uglify-js')
 var fs = require('fs');
 var util = require('util');
 
-
 /*Fetch Code*/
 var code = fs.readFileSync(inputFile, "utf8");
-
 
 /*Parser*/
 var toplevel = UglifyJS.parse(code);
@@ -41,6 +37,7 @@ var types = [];
 var outAST = fs.openSync('uglify/' + libName + '-AST.js', 'w');
 fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
 
+
 toplevel.figure_out_scope();
 
 
@@ -54,7 +51,7 @@ var getParentTypes = function(node) {
             }
             else if(value instanceof UglifyJS.AST_Call)
             {
-                parentTypes.push(value.TYPE + ' --- ' + value.name.name);
+                //parentTypes.push(value.TYPE + ' --- ' + value.name.name);
             }
             else
             {
@@ -65,7 +62,7 @@ var getParentTypes = function(node) {
     return parentTypes;
 };
 
-var printStackToFile = function(fname, stack){
+var printStackToFile = function(fname, stack) {
 
     for(var i = 0; i<stack.length; i++)
         fs.writeSync(fname, '-- ' + stack[i] + '\n');
@@ -113,7 +110,6 @@ var walkerFunction = function(node){
 
 
     /*Check for AST_ObjectKeyVal having a function as a key ( obj : function {}; ) style function definitions */
-    
     else if (node instanceof UglifyJS.AST_ObjectKeyVal) 
     {
         if(node.value instanceof UglifyJS.AST_Function)
@@ -170,6 +166,15 @@ var walkerFunction = function(node){
             }
         }
     }
+
+    /*Usual Function assignments: function foo(arg1, arg2){}*/
+    else if(node instanceof UglifyJS.AST_Function)
+    {
+        var parent = walker.parent().TYPE;
+        if(types.indexOf(parent) === -1)
+            types.push(parent);
+    }
+
     else if(node instanceof UglifyJS.AST_Function)
     {
         var parent = walker.parent().TYPE;
