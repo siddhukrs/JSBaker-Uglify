@@ -54,7 +54,7 @@ var getParentTypes = function(node) {
             }
             else if(value instanceof UglifyJS.AST_Call)
             {
-                parentTypes.push(value.TYPE + ' --- ' + value.name.name);
+                //parentTypes.push(value.TYPE + ' --- ' + value.name.name);
             }
             else
             {
@@ -68,7 +68,9 @@ var getParentTypes = function(node) {
 var printStackToFile = function(fname, stack){
 
     for(var i = 0; i<stack.length; i++)
+    {
         fs.writeSync(fname, '-- ' + stack[i] + '\n');
+    }
 };
 
 var printImmediateParentToFile = function(fname, stack) {
@@ -102,7 +104,7 @@ var walkerFunction = function(node){
     /*Check for AST_Defun ( function foo(){} ) style function definitions */
     if (node instanceof UglifyJS.AST_Defun) 
     {
-             fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
+            fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
             name: node.name.name,
             line: node.start.line,
             col: node.start.col
@@ -172,6 +174,15 @@ var walkerFunction = function(node){
     }
     else if(node instanceof UglifyJS.AST_Function)
     {
+        var parent = walker.parent().TYPE;
+        if(types.indexOf(parent) === -1)
+            types.push(parent);
+    }
+
+    else if(node instanceof UglifyJS.AST_PropAccess)
+    {
+        console.log('here!!!!!-------------------------------'+ node.expression);
+        console.log()
         var parent = walker.parent().TYPE;
         if(types.indexOf(parent) === -1)
             types.push(parent);
