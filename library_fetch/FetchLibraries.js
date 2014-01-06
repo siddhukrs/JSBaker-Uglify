@@ -16,10 +16,14 @@ if (typeof String.prototype.endsWith != 'function') {
 	};
 }
 
-var indexOf = function(needle) {
-    if(typeof Array.prototype.indexOf === 'function') {
+function indexOf(needle) 
+{
+    if(typeof Array.prototype.indexOf === 'function') 
+    {
         indexOf = Array.prototype.indexOf;
-    } else {
+    } 
+    else 
+    {
         indexOf = function(needle) {
             var i = -1, index = -1;
 
@@ -37,7 +41,8 @@ var indexOf = function(needle) {
     return indexOf.call(this, needle);
 };
 
-var walkExistingPackagesFound = function(dir) {
+function walkExistingPackagesFound(dir) 
+{
 	var results = [];
 	var list = fs.readdirSync(dir);
 	if(list.length > 0)
@@ -62,7 +67,8 @@ var walkExistingPackagesFound = function(dir) {
 };
 
 
-var walk = function(dir) {
+function walk(dir) 
+{
 	var results = [];
 	var list = fs.readdirSync(dir);
 	if(list.length > 0)
@@ -84,52 +90,12 @@ var walk = function(dir) {
 	return results;
 };
 
+
 /*
-	--------------------------
-		Main starts:
-	--------------------------
+	-------------------------
+	Primary helper functions
+	-------------------------
 */
-
-var fs = require('fs');
-
-var execSync = require('execSync');
-
-var existingPackages = walkExistingPackagesFound('Fetched_Libraries');
-
-var existingNpmInstalls = fs.readdirSync('node_modules');
-
-var newresults = [];
-
-var results =  walk('node_modules');
-
-var notFoundArray = [];
-if (process.argv.length < 3)
-{
-
-	/*var packageListFile = 'library_list.txt';
-	var packageList = fs.readFileSync(packageListFile);
-	var packageArray = packageList.toString().split("\n");
-	for(var i=0; i<packageArray.length; i++)
-	{
-		var packageName = packageArray[i];
-		resolveAndFetchLibrary(packageName);
-	}*/
-	console.log('Missing package name argument.');
-    process.exit(1);
-
-}
-else
-{
-	var packageName = process.argv[2];
-	resolveAndFetchLibrary(packageName);
-}
-
-if(notFoundArray.length > 0)
-{
-	console.log("NOT FOUND: ")
-	for(var i =0; i<notFoundArray.length; i++)
-		console.log( ' - ' + notFoundArray[i]);
-}
 
 
 function writeFileToFolder(fileName, packageName)
@@ -240,4 +206,51 @@ function resolveAndFetchLibrary(packageName)
 			notFoundArray.push(packageName);
 		}
 	}
+}
+
+/*
+	--------------------------
+		Main starts:
+	--------------------------
+*/
+
+var fs = require('fs');
+
+var execSync = require('execSync');
+
+var existingPackages = walkExistingPackagesFound('Fetched_Libraries');
+
+var existingNpmInstalls = fs.readdirSync('node_modules');
+
+var newresults = [];
+
+var results =  walk('node_modules');
+
+var notFoundArray = [];
+if (process.argv.length < 3)
+{
+
+	/*var packageListFile = 'library_list.txt';
+	var packageList = fs.readFileSync(packageListFile);
+	var packageArray = packageList.toString().split("\n");
+	for(var i=0; i<packageArray.length; i++)
+	{
+		var packageName = packageArray[i];
+		resolveAndFetchLibrary(packageName);
+	}*/
+	console.log('Missing package name argument.');
+    process.exit(1);
+
+}
+else
+{
+	var packageName = process.argv[2];
+	resolveAndFetchLibrary(packageName);
+}
+
+if(notFoundArray.length > 0)
+{
+	console.log("NOT FOUND: ")
+	for(var i =0; i<notFoundArray.length; i++)
+		console.log( ' - ' + notFoundArray[i]);
 }
