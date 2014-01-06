@@ -46,12 +46,12 @@ function getParentTypes(node)
     var parents = walker.stack;
     var parentTypes = [];
     parents.forEach( function(value) {
-            if(value instanceof UglifyJS.AST_VarDef)
-            {
-                parentTypes.push(value.TYPE + ' --- ' + value.name.name);
-            }
-            else if(value instanceof UglifyJS.AST_Call)
-            {
+        if(value instanceof UglifyJS.AST_VarDef)
+        {
+            parentTypes.push(value.TYPE + ' --- ' + value.name.name);
+        }
+        else if(value instanceof UglifyJS.AST_Call)
+        {
                 //parentTypes.push(value.TYPE + ' --- ' + value.name.name);
             }
             else
@@ -59,7 +59,7 @@ function getParentTypes(node)
                 parentTypes.push(value.TYPE);
             }
         }
-    );
+        );
     return parentTypes;
 };
 
@@ -133,61 +133,61 @@ function walkerFunction(node)
     /*Check for AST_Defun ( function foo(){} ) style function definitions */
     if (node instanceof UglifyJS.AST_Defun) 
     {
-            fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
+        fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
             name: node.name.name,
             line: node.start.line,
             col: node.start.col
         }) + "\n");
-             fs.writeSync(names,  node.name.name + '\n');
-             printStackToFile(names, getParentTypes(node));
-    }
+        fs.writeSync(names,  node.name.name + '\n');
+             //printStackToFile(names, getParentTypes(node));
+         }
 
 
-    /*Check for AST_ObjectKeyVal having a function as a key ( obj : function {}; ) style function definitions */
-    else if (node instanceof UglifyJS.AST_ObjectKeyVal) 
-    {
-        if(node.value instanceof UglifyJS.AST_Function)
-        {
-                 fs.writeSync(out, UglifyJS.string_template("Found AST_ObjectKeyVal {name} at {line},{col}", {
+         /*Check for AST_ObjectKeyVal having a function as a key ( obj : function {}; ) style function definitions */
+         else if (node instanceof UglifyJS.AST_ObjectKeyVal) 
+         {
+            if(node.value instanceof UglifyJS.AST_Function)
+            {
+               fs.writeSync(out, UglifyJS.string_template("Found AST_ObjectKeyVal {name} at {line},{col}", {
                 name: node.key,
                 line: node.start.line,
                 col: node.start.col
             }) + "\n");
-                 fs.writeSync(names,  node.key + '\n' );
-                 printStackToFile(names, getParentTypes(node));
-        }
-    }
+               fs.writeSync(names,  node.key + '\n' );
+                 //printStackToFile(names, getParentTypes(node));
+             }
+         }
 
-    /*Check for AST_Assign having a function as the RHS ( x = function {}; ) style function definitions. Handle for multiple LHS */
-    else if(node instanceof UglifyJS.AST_Assign)
-    {
-        if (node.right instanceof UglifyJS.AST_Function) 
-        {
-            /*Collect Function args and details */
-            var functionNode = node.right;
-        
-            var args = functionNode.argnames;
-            var argStrings = [];
-            for(var i = 0 ; i< args.length; i++)
+         /*Check for AST_Assign having a function as the RHS ( x = function {}; ) style function definitions. Handle for multiple LHS */
+         else if(node instanceof UglifyJS.AST_Assign)
+         {
+            if (node.right instanceof UglifyJS.AST_Function) 
             {
-                argStrings.push(args[i].name);
-            }
-            
-            
-            if(node.left instanceof UglifyJS.AST_Dot || node.left.expression instanceof UglifyJS.AST_Sub)
-            {
-                var nameret = visitDotSubExp(node.left, '');
+                /*Collect Function args and details */
+                var functionNode = node.right;
+
+                var args = functionNode.argnames;
+                var argStrings = [];
+                for(var i = 0 ; i< args.length; i++)
+                {
+                    argStrings.push(args[i].name);
+                }
+
+
+                if(node.left instanceof UglifyJS.AST_Dot || node.left.expression instanceof UglifyJS.AST_Sub)
+                {
+                    var nameret = visitDotSubExp(node.left, '');
                 // -- console.log(nameret + " ^^^" + node.left.start.line);
                 fs.writeSync(out, "name: " + nameret + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
                 fs.writeSync(names, nameret + '\n' );
-                printStackToFile(names, getParentTypes(node));
+                //printStackToFile(names, getParentTypes(node));
             }
 
             else if(node.left instanceof UglifyJS.AST_SymbolRef)
             {
                 fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
                 fs.writeSync(names, node.left.name  + '\n');
-                printStackToFile(names, getParentTypes(node));
+                //printStackToFile(names, getParentTypes(node));
             }
             else if(node.left instanceof UglifyJS.AST_Assign)
             {
@@ -217,7 +217,12 @@ function walkerFunction(node)
             functionName = node.expression.name;
         else
             functionName = visitDotSubExp(node.expression, '');
-        //console.log(functionName);
+        console.log('------------------------------------------------ '+functionName);
+        if(true)
+        {
+
+        }
+
         if(functionName === 'jQuery.each')
         {
             var args = node.args;
@@ -227,7 +232,7 @@ function walkerFunction(node)
             {
                 var stream = UglifyJS.OutputStream({quote_keys : true});
                 var code = args[0].print(stream);
-            
+                
                 var arg0 = stream.toString();
 
                 var obj;
@@ -242,7 +247,7 @@ function walkerFunction(node)
                         throw err;
                     }
                 }
-                
+
                 if(obj !== null)
                 {
                     if(callbackFunction.argnames.length === 2)
@@ -252,7 +257,6 @@ function walkerFunction(node)
                 }              
             }
         }
-
         
     }
 
@@ -273,31 +277,6 @@ function getDynamicMethods (valuesNode, callbackNode, arg0)
 {
     var flag = 0;
     console.log('***********');
-    if(valuesNode instanceof Array)
-    {
-        for(var j = 0; j< valuesNode.length; j++)
-            console.log(' --> Array value ' + j + ': ' + valuesNode[j]);
-    }
-    else
-    {
-        try
-        {
-            //var json2js = require('./json2.js');
-            valuesNode = JSON.parse(arg0);
-        }
-        catch(err)
-        {
-            if(err.name !== 'SyntaxError')
-                throw err;
-            else 
-                flag = 1;
-        }
-        if(flag === 0)
-        for(var key in valuesNode)
-        {
-            console.log(' --> ' + key + ' : ' + valuesNode[key]);
-        }
-    }
 
     var callbackArg1, callbackArg2;
     if(flag === 0)
@@ -306,19 +285,86 @@ function getDynamicMethods (valuesNode, callbackNode, arg0)
         callbackArg2 = callbackNode.argnames[1].name;
     }
 
-    //lookForJqueryFn(callbackNode.body);
 
+    setFlag = true;
     var fnBodyWalker = new UglifyJS.TreeWalker(lookForJqueryFn);
     callbackNode.walk(fnBodyWalker);
+    if(setFlag === false)
+    {
+        console.log(jqueryFnMethod);
+        var splitArr = jqueryFnMethod.split('.');
+        var item = splitArr[splitArr.length-1];
+        console.log(item);
+        if(valuesNode instanceof Array)
+        {
+            if(item === callbackArg2)
+            {
+                for(var j = 0; j< valuesNode.length; j++)
+                {
+                    var temp = jqueryFnMethod.split('.');
+                    //console.log(temp);
+                    temp.splice(-1, 1);
+                    temp = temp.join('.');
+                    temp = temp + '.' +  valuesNode[j];
+                    console.log(' --> Array value ' + j + ': ' + temp);
+                    fs.writeSync(names,  temp + '\n');
+                }
+            }
+        }
+        else
+        {
+            try
+            {
+                valuesNode = JSON.parse(arg0);
+            }
+            catch(err)
+            {
+                if(err.name !== 'SyntaxError')
+                    throw err;
 
+            }
+            for(var key in valuesNode)
+            {
+                if(item === callbackArg2)
+                {
+                    var temp = jqueryFnMethod.split('.');
+                    temp.splice(-1, 1);
+                    temp = temp.join('.');
+                    temp = temp + '.' +  valuesNode[key];
+                    console.log(' --> ' + key + ' : ' + temp);
+                    fs.writeSync(names,  temp + '\n');
+                }
+                else if(item === callbackArg1)
+                {
+                    var temp = jqueryFnMethod.split('.');
+                    temp.splice(-1, 1);
+                    temp = temp.join('.');
+                    temp = temp + '.' +  key;
+                    console.log(' --> ' + key + ' : ' + temp);
+                    fs.writeSync(names,  temp + '\n');
+                }
+            }
+
+        }
+    }
+    else
+    {
+        console.log('flag not set');
+    }
 }
 
+
+var jqueryFnMethod;
+var setFlag = false;
 function lookForJqueryFn(node)
 {
     if(node instanceof UglifyJS.AST_Assign)
     {
         if(node.right instanceof UglifyJS.AST_Function)
-            console.log(visitDotSubExp(node.left, ''));
+        {
+            jqueryFnMethod = visitDotSubExp(node.left, '');
+            setFlag = !setFlag;
+        }
     }
 }
 
@@ -329,7 +375,7 @@ var walker = new UglifyJS.TreeWalker(walkerFunction);
 toplevel.walk(walker);
 
 types.forEach(function(entry)
-    {
+{
        // --  console.log(entry);
-    }
-);
+   }
+   );
