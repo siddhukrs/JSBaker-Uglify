@@ -35,12 +35,91 @@ var names = fs.openSync('uglify/' + libName + '-uglify-names.js', 'w');
 var types = [];
 
 /*To print the AST to a file: */
-/*var outAST = fs.openSync('uglify/' + libName + '-AST.js', 'w');
-fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));*/
+//var outAST = fs.openSync('uglify/' + libName + '-AST.js', 'w');
+//fs.writeSync(outAST, JSON.stringify(toplevel, null, '\t'));
 
-
+/*Walk the AST */
 toplevel.figure_out_scope();
+var walker = new UglifyJS.TreeWalker(primaryWalkerFunction);
+toplevel.walk(walker);
 
+//console.log('second pass');
+
+var secondwalker = new UglifyJS.TreeWalker(secondaryWalkerFunction);
+toplevel.walk(secondwalker);
+
+
+/* A second walk to identify aliases*/
+function secondaryWalkerFunction(node)
+{
+    if(node instanceof UglifyJS.AST_Assign)
+    {
+        if(node.right instanceof UglifyJS.AST_Dot || node.right instanceof UglifyJS.AST_Sub)
+        {
+            var name = visitDotSubExp(node.right, '');
+            
+            if(methodCollection.hasOwnProperty(name))
+            {
+                if(node.left instanceof UglifyJS.AST_Dot || node.left.expression instanceof UglifyJS.AST_Sub)
+                {
+                    var nameret = visitDotSubExp(node.left, '');
+                    //console.log(removeProto(nameret));
+                    methodCollection[removeProto(nameret)] = true;
+                }
+
+                else if(node.left instanceof UglifyJS.AST_SymbolRef)
+                {
+                    //console.log(removeProto(node.left.name));
+                    methodCollection[removeProto(node.left.name)] = true;
+                }
+                addMethodsFromAssignmentChain(secondwalker.stack);
+            }
+        }
+        if(node.right instanceof UglifyJS.AST_SymbolRef)
+        {
+            var name = node.right.name;
+            //console.log('** ' + name);
+            if(methodCollection.hasOwnProperty(name))
+            {
+                if(node.left instanceof UglifyJS.AST_Dot || node.left.expression instanceof UglifyJS.AST_Sub)
+                {
+                    //console.log(node.start.line);
+                    var nameret = visitDotSubExp(node.left, '');
+                    //console.log(removeProto(nameret));
+                    if(nameret !== undefined && nameret !== null && nameret.indexOf('undefined') === -1)
+                        methodCollection[removeProto(nameret)] = true;
+                }
+
+                else if(node.left instanceof UglifyJS.AST_SymbolRef)
+                {
+                    //console.log(removeProto(node.left.name));
+                    methodCollection[removeProto(node.left.name)] = true;
+                }
+                addMethodsFromAssignmentChain(secondwalker.stack);
+            }
+        }
+    }
+    if(node instanceof UglifyJS.AST_VarDef)
+    {
+        if(node.value instanceof UglifyJS.AST_Dot || node.value instanceof UglifyJS.AST_Sub)
+        {
+            var name = visitDotSubExp(node.value, '');
+            
+            if(methodCollection.hasOwnProperty(name))
+            {
+                methodCollection[removeProto(node.name.name)] = true;
+            }
+        }
+        if(node.value instanceof UglifyJS.AST_SymbolRef)
+        {
+            var name = node.value.name;
+            if(methodCollection.hasOwnProperty(name))
+            {
+                methodCollection[removeProto(node.name.name)] = true;
+            }
+        }
+    }
+}
 
 function getParentTypes(node) 
 {
@@ -54,38 +133,29 @@ function getParentTypes(node)
         else if(value instanceof UglifyJS.AST_Call)
         {
                 //parentTypes.push(value.TYPE + ' --- ' + value.name.name);
-            }
-            else
-            {
-                parentTypes.push(value.TYPE);
-            }
         }
-        );
+        else
+        {
+            parentTypes.push(value.TYPE);
+        }
+    });
     return parentTypes;
 };
 
 function printStackToFile(fname, stack) 
 {
-
     for(var i = 0; i<stack.length; i++)
     {
         fs.writeSync(fname, '-- ' + stack[i] + '\n');
     }
 };
 
-function printImmediateParentToFile(fname, stack) 
-{
-
-};
 
 
 function visitDotSubExp(node, name) 
 {
-    // -- console.log('-- ' + node.TYPE + ' --');
-
     if(node.expression instanceof UglifyJS.AST_SymbolRef)
     {
-        //console.log('here');
         if(name !== '')
         {
             if(node.hasOwnProperty('property') && node.property.hasOwnProperty('name'))
@@ -148,19 +218,37 @@ function visitDotSubExp(node, name)
     }
 };
 
-function walkerFunction(node) 
+
+function addMethodsFromAssignmentChain(stack)
+{
+    for(var i = stack.length-2; i>=0; i--)
+    {
+        //console.log(stack[i].TYPE);
+        if(stack[i] instanceof UglifyJS.AST_Assign)
+        {
+            if(stack[i].left instanceof UglifyJS.AST_SymbolRef)
+            {
+                methodCollection[removeProto(stack[i].left.name)] = true;
+            }
+            else
+            {
+                var method = visitDotSubExp(stack[i].left, '');
+                methodCollection[removeProto(method)] = true;
+            }
+        }
+        else
+            break;
+    }
+}
+
+function primaryWalkerFunction(node) 
 {
 
     /*Check for AST_Defun ( function foo(){} ) style function definitions */
     if (node instanceof UglifyJS.AST_Defun) 
     {
-        fs.writeSync(out, UglifyJS.string_template("Found AST_Defun {name} at {line},{col}", {
-            name: node.name.name,
-            line: node.start.line,
-            col: node.start.col
-        }) + "\n");
-        //fs.writeSync(names,  removeProto(node.name.name) + '\n');
         methodCollection[removeProto(node.name.name)] = true;
+        //fs.writeSync(names,  removeProto(node.name.name) + '\n');
         //printStackToFile(names, getParentTypes(node));
     }
 
@@ -170,68 +258,62 @@ function walkerFunction(node)
     {
         if(node.value instanceof UglifyJS.AST_Function)
         {
-         fs.writeSync(out, UglifyJS.string_template("Found AST_ObjectKeyVal {name} at {line},{col}", {
-            name: node.key,
-            line: node.start.line,
-            col: node.start.col
-        }) + "\n");
-        //fs.writeSync(names,  removeProto(node.key) + '\n' );
-        methodCollection[removeProto(node.key)] = true;
-        //printStackToFile(names, getParentTypes(node));
+            methodCollection[removeProto(node.key)] = true;
+            //fs.writeSync(names,  removeProto(node.key) + '\n' );
+            //printStackToFile(names, getParentTypes(node));
         }
     }
 
     /*Check for AST_Assign having a function as the RHS ( x = function {}; ) style function definitions. Handle for multiple LHS */
     else if(node instanceof UglifyJS.AST_Assign)
     {
-            if (node.right instanceof UglifyJS.AST_Function) 
+        if (node.right instanceof UglifyJS.AST_Function) 
+        {
+            /*Collect Function args and details */
+            var functionNode = node.right;
+
+            var args = functionNode.argnames;
+            var argStrings = [];
+            for(var i = 0 ; i< args.length; i++)
             {
-                /*Collect Function args and details */
-                var functionNode = node.right;
-
-                var args = functionNode.argnames;
-                var argStrings = [];
-                for(var i = 0 ; i< args.length; i++)
-                {
-                    argStrings.push(args[i].name);
-                }
-
-
-                if(node.left instanceof UglifyJS.AST_Dot || node.left.expression instanceof UglifyJS.AST_Sub)
-                {
-                    var nameret = visitDotSubExp(node.left, '');
-                    fs.writeSync(out, "name: " + nameret + " : line:" + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                    methodCollection[removeProto(nameret)] = true;
-                    //printStackToFile(names, getParentTypes(node));
-                }
-
-                else if(node.left instanceof UglifyJS.AST_SymbolRef)
-                {
-                    var nameret = visitDotSubExp(node.left, '');
-                    fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                    //fs.writeSync(names, removeProto(node.left.name)  + '\n');
-                    methodCollection[removeProto(node.left.name)] = true;
-                    //printStackToFile(names, getParentTypes(node));
-                }
-                else if(node.left instanceof UglifyJS.AST_Assign)
-                {
-                    // -- console.log("AST_Assign - handle this");
-                    //fs.writeSync(out, "name: "+ node.left.name + " : line: " + functionNode.start.line + " col: " + functionNode.start.col + "\n");
-                }
-                else
-                {
-                    // -- console.log(node.left.TYPE);
-                }
+                argStrings.push(args[i].name);
             }
+
+
+            if(node.left instanceof UglifyJS.AST_Dot || node.left.expression instanceof UglifyJS.AST_Sub)
+            {
+                var nameret = visitDotSubExp(node.left, '');
+                methodCollection[removeProto(nameret)] = true;
+                //fs.writeSync(names, removeProto(nameret)  + '\n');
+                //printStackToFile(names, getParentTypes(node));
+            }
+
+            else if(node.left instanceof UglifyJS.AST_SymbolRef)
+            {
+                methodCollection[removeProto(node.left.name)] = true;
+                //fs.writeSync(names, removeProto(node.left.name)  + '\n');
+                //printStackToFile(names, getParentTypes(node));
+            }
+
+            else
+            {
+                // -- console.log(node.left.TYPE);
+            }
+
+            addMethodsFromAssignmentChain(walker.stack);
+            
+        }
     }
 
-    /*Usual Function assignments: function foo(arg1, arg2){}*/
-    else if(node instanceof UglifyJS.AST_Function)
+    else if(node instanceof UglifyJS.AST_VarDef)
     {
-        var parent = walker.parent().TYPE;
-        if(types.indexOf(parent) === -1)
-            types.push(parent);
+        if(node.value instanceof UglifyJS.AST_Function)
+        {
+            //console.log(node.name.name);
+            methodCollection[removeProto(node.name.name)] = true;
+        }
     }
+
 
     /*Handle the jquery.each() being used to create methods dynamically*/
     else if(node instanceof UglifyJS.AST_Call)
@@ -242,14 +324,14 @@ function walkerFunction(node)
         else
             functionName = visitDotSubExp(node.expression, '');
         
-        //console.log('------------------------------------------------ '+functionName);
         if(functionName !== null && functionName !== undefined)
         {
+            /* Fetch all library functions being utilised locally which we might not have determined */
             if(functionName.indexOf('undefined') === -1 && functionName.toLowerCase().indexOf(libName + '.') !== -1)
             {
-                //fs.writeSync(names,  removeProto(functionName) + '\n');
                 methodCollection[removeProto(functionName)] = true;
-                //console.log('------------------------------------------------ '+functionName);
+                //fs.writeSync(names,  removeProto(functionName) + '\n');
+                //printStackToFile(names, getParentTypes(node));
             }
 
         }
@@ -257,15 +339,12 @@ function walkerFunction(node)
         if(functionName === 'jQuery.each')
         {
             var args = node.args;
-
             var callbackFunction = args[1];
             if(callbackFunction instanceof UglifyJS.AST_Function)
             {
                 var stream = UglifyJS.OutputStream({quote_keys : true});
                 var code = args[0].print(stream);
-                
                 var arg0 = stream.toString();
-
                 var obj;
                 try
                 {
@@ -290,24 +369,12 @@ function walkerFunction(node)
         }
         
     }
-
-    else if(node instanceof UglifyJS.AST_PropAccess)
-    {
-        // -- console.log('here!!!!!-------------------------------'+ node.expression);
-        // -- console.log()
-        var parent = walker.parent().TYPE;
-        if(types.indexOf(parent) === -1)
-            types.push(parent);
-    }
-
-    
 };
 
 
 function getDynamicMethods (valuesNode, callbackNode, arg0)
 {
     var flag = 0;
-    console.log('***********');
 
     var callbackArg1, callbackArg2;
     if(flag === 0)
@@ -322,10 +389,8 @@ function getDynamicMethods (valuesNode, callbackNode, arg0)
     callbackNode.walk(fnBodyWalker);
     if(setFlag === false)
     {
-        console.log(jqueryFnMethod);
         var splitArr = jqueryFnMethod.split('.');
         var item = splitArr[splitArr.length-1];
-        console.log(item);
         if(valuesNode instanceof Array)
         {
             if(item === callbackArg2)
@@ -333,11 +398,9 @@ function getDynamicMethods (valuesNode, callbackNode, arg0)
                 for(var j = 0; j< valuesNode.length; j++)
                 {
                     var temp = jqueryFnMethod.split('.');
-                    //console.log(temp);
                     temp.splice(-1, 1);
                     temp = temp.join('.');
                     temp = temp + '.' +  valuesNode[j];
-                    console.log(' --> Array value ' + j + ': ' + removeProto(temp));
                     //fs.writeSync(names,  removeProto(temp) + '\n');
                     methodCollection[removeProto(temp)] = true;
                 }
@@ -363,7 +426,6 @@ function getDynamicMethods (valuesNode, callbackNode, arg0)
                     temp.splice(-1, 1);
                     temp = temp.join('.');
                     temp = temp + '.' +  valuesNode[key];
-                    console.log(' --> ' + key + ' : ' + removeProto(temp));
                     //fs.writeSync(names,  removeProto(temp) + '\n');
                     methodCollection[removeProto(temp)] = true;
                 }
@@ -373,7 +435,6 @@ function getDynamicMethods (valuesNode, callbackNode, arg0)
                     temp.splice(-1, 1);
                     temp = temp.join('.');
                     temp = temp + '.' +  key;
-                    console.log(' --> ' + key + ' : ' + removeProto(temp));
                     //fs.writeSync(names,  removeProto(temp) + '\n');
                     methodCollection[removeProto(temp)] = true;
                 }
@@ -383,7 +444,7 @@ function getDynamicMethods (valuesNode, callbackNode, arg0)
     }
     else
     {
-        console.log('flag not set');
+        //console.log('flag not set');
     }
 }
 
@@ -416,22 +477,10 @@ function removeProto(name)
     return ret;
 }
 
-var walker = new UglifyJS.TreeWalker(walkerFunction);
 
-
-/*Walk the AST */
-toplevel.walk(walker);
-
-types.forEach(function(entry)
-{
- console.log(entry);
-}
-
-
-);
 
 for(var key in methodCollection)
 {
     fs.writeSync(names,  key + '\n');
-    console.log('++ ' + key);
+    //console.log('++ ' + key);
 }
