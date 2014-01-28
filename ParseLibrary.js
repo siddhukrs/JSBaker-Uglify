@@ -1,3 +1,5 @@
+/**** Top Level Code Starts ****/
+
 /* Input CLI arguments*/
 var inputFile;
 var libName;
@@ -48,6 +50,8 @@ toplevel.walk(walker);
 var secondwalker = new UglifyJS.TreeWalker(secondaryWalkerFunction);
 toplevel.walk(secondwalker);
 
+
+/**** Top Level Code Ends ****/
 
 /* A second walk to identify aliases*/
 function secondaryWalkerFunction(node)
